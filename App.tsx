@@ -12,6 +12,7 @@ import GroupDetailPage from "./pages/GroupDetailPage";
 import QuickNotePage from "./pages/QuickNotePage";
 import AgendaPage from "./pages/AgendaPage";
 import SettingsPage from "./pages/SettingsPage";
+import ArchivedGroupsPage from "./pages/ArchivedGroupsPage";
 import LoginPage from "./pages/LoginPage";
 import BottomNav from "./components/BottomNav";
 
@@ -113,6 +114,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/archived"
+        element={
+          <ProtectedRoute>
+            <ArchivedGroupsPage />
           </ProtectedRoute>
         }
       />

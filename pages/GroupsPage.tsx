@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import {
@@ -6,12 +6,24 @@ import {
   PlusIcon,
   ArchiveBoxIcon,
   RefreshIcon,
+  ChevronLeftIcon,
+  DocumentTextIcon,
 } from "../components/Icons";
 import SwipeableItem from "../components/SwipeableItem";
+import SummaryModal from "../components/SummaryModal";
+import DatePickerModal from "../components/DatePickerModal";
+import { summarizeNotesByDate } from "../services/geminiService";
 
 const GroupsPage: React.FC = () => {
-  const { groups, createGroup, archiveGroup } = useApp();
+  const { groups, createGroup, archiveGroup, messages } = useApp();
   const navigate = useNavigate();
+
+  // Modal states
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [summaryContent, setSummaryContent] = useState("");
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [summaryDate, setSummaryDate] = useState("");
 
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -42,6 +54,42 @@ const GroupsPage: React.FC = () => {
     navigate(`/group/${id}`);
   };
 
+  const handleDateSummary = async (selectedDate: string) => {
+    setSummaryDate(selectedDate);
+    setShowSummaryModal(true);
+    setIsGeneratingSummary(true);
+    setSummaryContent("");
+
+    try {
+      // Parse the selected date (DD/MM/YYYY format)
+      const [day, month, year] = selectedDate.split("/");
+      const targetDate = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day)
+      );
+
+      // Get all messages from that date
+      const targetMessages = messages.filter((msg) => {
+        const messageDate = new Date(msg.timestamp);
+        return messageDate.toDateString() === targetDate.toDateString();
+      });
+
+      if (targetMessages.length === 0) {
+        setSummaryContent(`Nenhuma nota encontrada para ${selectedDate}.`);
+      } else {
+        const notesTexts = targetMessages.map((m) => m.text);
+        const summary = await summarizeNotesByDate(notesTexts, selectedDate);
+        setSummaryContent(summary);
+      }
+    } catch (error) {
+      console.error("Erro ao gerar resumo por data:", error);
+      setSummaryContent("Erro ao gerar resumo. Tente novamente.");
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
   // Filter out archived groups
   const activeGroups = groups.filter((g) => !g.isArchived);
 
@@ -52,6 +100,13 @@ const GroupsPage: React.FC = () => {
           Meus Grupos
         </h1>
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowDatePicker(true)}
+            className="w-10 h-10 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+            title="Resumir notas por data"
+          >
+            <DocumentTextIcon className="w-5 h-5" />
+          </button>
           <button
             onClick={() => window.location.reload()}
             className="w-10 h-10 bg-gray-200 text-gray-700 rounded-full flex items-center justify-center active:scale-90 transition-transform"
@@ -67,7 +122,33 @@ const GroupsPage: React.FC = () => {
           </button>
         </div>
       </div>
-
+      {/* Link para grupos arquivados */}
+      {groups.some((g) => g.isArchived) && (
+        <div className="mt-6 mb-4">
+          <button
+            onClick={() => navigate("/archived")}
+            className="w-full bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+                <ArchiveBoxIcon className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900 text-sm">
+                  Grupos Arquivados
+                </p>
+                <p className="text-xs text-gray-500">
+                  {groups.filter((g) => g.isArchived).length}{" "}
+                  {groups.filter((g) => g.isArchived).length === 1
+                    ? "grupo"
+                    : "grupos"}
+                </p>
+              </div>
+            </div>
+            <ChevronLeftIcon className="w-5 h-5 text-gray-400 rotate-180" />
+          </button>
+        </div>
+      )}
       <div className="space-y-3">
         {activeGroups.map((group) => (
           <SwipeableItem
@@ -123,6 +204,23 @@ const GroupsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        isOpen={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        onDateSelect={handleDateSummary}
+        title="Resumo por Data"
+      />
+
+      {/* Summary Modal */}
+      <SummaryModal
+        isOpen={showSummaryModal}
+        onClose={() => setShowSummaryModal(false)}
+        title={`Resumo do dia ${summaryDate}`}
+        content={summaryContent}
+        isLoading={isGeneratingSummary}
+      />
     </div>
   );
 };

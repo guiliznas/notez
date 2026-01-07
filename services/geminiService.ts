@@ -51,3 +51,88 @@ export const suggestTitle = async (content: string): Promise<string> => {
     return "Nova Nota";
   }
 };
+
+/**
+ * Gera um resumo estruturado de múltiplas notas
+ * Formato: Anotações/Informações + Ações
+ */
+export const summarizeNotes = async (notes: string[]): Promise<string> => {
+  if (!notes || notes.length === 0) {
+    return "Nenhuma nota para resumir.";
+  }
+
+  try {
+    const notesText = notes
+      .map((note, idx) => `${idx + 1}. ${note}`)
+      .join("\n");
+
+    const prompt = `Analise as seguintes anotações e crie um resumo estruturado em português:
+
+${notesText}
+
+Por favor, organize o resumo no seguinte formato:
+
+📝 ANOTAÇÕES E INFORMAÇÕES:
+• [Liste aqui os pontos informativos, observações, contextos e dados relevantes em tópicos]
+
+✅ AÇÕES E TAREFAS:
+• [Liste aqui as ações identificadas, tarefas pendentes, itens que requerem follow-up ou decisões]
+
+Seja conciso e objetivo. Se não houver ações identificadas, escreva "Nenhuma ação identificada."`;
+
+    const response: GenerateContentResponse = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+    });
+
+    return response.text || "Não foi possível gerar o resumo.";
+  } catch (error) {
+    console.error("Error summarizing notes:", error);
+    return "Erro ao gerar resumo. Tente novamente.";
+  }
+};
+
+/**
+ * Gera um resumo estruturado de notas de uma data específica
+ * Formato: Anotações/Informações + Ações
+ */
+export const summarizeNotesByDate = async (
+  notes: string[],
+  date: string
+): Promise<string> => {
+  if (!notes || notes.length === 0) {
+    return "Nenhuma nota encontrada para esta data.";
+  }
+
+  try {
+    const notesText = notes
+      .map((note, idx) => `${idx + 1}. ${note}`)
+      .join("\n");
+
+    const prompt = `Analise as seguintes anotações do dia ${date} e crie um resumo estruturado em português:
+
+${notesText}
+
+Por favor, organize o resumo no seguinte formato:
+
+📅 RESUMO DO DIA ${date}
+
+📝 ANOTAÇÕES E INFORMAÇÕES:
+• [Liste aqui os pontos informativos, observações, contextos e dados relevantes em tópicos]
+
+✅ AÇÕES E TAREFAS:
+• [Liste aqui as ações identificadas, tarefas pendentes, itens que requerem follow-up ou decisões]
+
+Seja conciso e objetivo. Se não houver ações identificadas, escreva "Nenhuma ação identificada."`;
+
+    const response: GenerateContentResponse = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+    });
+
+    return response.text || "Não foi possível gerar o resumo.";
+  } catch (error) {
+    console.error("Error summarizing notes by date:", error);
+    return "Erro ao gerar resumo. Tente novamente.";
+  }
+};
