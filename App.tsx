@@ -11,6 +11,7 @@ import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
 import QuickNotePage from "./pages/QuickNotePage";
 import AgendaPage from "./pages/AgendaPage";
+import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
 import BottomNav from "./components/BottomNav";
 
@@ -104,6 +105,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <AgendaPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
           </ProtectedRoute>
         }
       />

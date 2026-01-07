@@ -19,6 +19,10 @@ import {
   deleteDoc,
   setDoc,
 } from "firebase/firestore";
+import {
+  fetchCalendarEvents,
+  convertGoogleEventsToAppFormat,
+} from "../services/calendarService";
 
 interface AppContextType {
   user: User | null;
@@ -208,17 +212,27 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
     };
   };
 
-  const mockCalendarFetch = (uid: string) => {
-    setEvents((prev) => [
-      ...prev,
-      {
-        id: "synced_1",
-        title: `Reunião Sincronizada`,
-        startTime: "09:00",
-        endTime: "10:00",
-        dateLabel: "Hoje",
-      },
-    ]);
+  const mockCalendarFetch = async (uid: string) => {
+    console.log("[APPCONTEXT] Buscando eventos do Google Calendar...");
+    try {
+      const googleEvents = await fetchCalendarEvents();
+      console.log(
+        "[APPCONTEXT] Eventos do Google Calendar recebidos:",
+        googleEvents.length
+      );
+
+      if (googleEvents.length > 0) {
+        const appEvents = convertGoogleEventsToAppFormat(googleEvents);
+        setEvents(appEvents);
+      } else {
+        // Se não houver eventos, mantém os eventos iniciais
+        setEvents(INITIAL_EVENTS);
+      }
+    } catch (error) {
+      console.error("[APPCONTEXT] Erro ao buscar eventos do calendar:", error);
+      // Em caso de erro, usa eventos mock
+      setEvents(INITIAL_EVENTS);
+    }
   };
 
   const signIn = async () => {

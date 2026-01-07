@@ -37,9 +37,26 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
+// Adicionar permissão para acessar o Google Calendar
+googleProvider.addScope("https://www.googleapis.com/auth/calendar.readonly");
+
+// Chave para armazenar o token no localStorage
+const GOOGLE_ACCESS_TOKEN_KEY = "google_access_token";
+
 export const signInWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
+
+    // Obter o access token do OAuth
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (credential && credential.accessToken) {
+      // Salvar no localStorage
+      localStorage.setItem(GOOGLE_ACCESS_TOKEN_KEY, credential.accessToken);
+      console.log("[FIREBASE] Access token obtido e salvo no localStorage");
+    } else {
+      console.warn("[FIREBASE] Access token não encontrado no resultado");
+    }
+
     return result.user;
   } catch (error) {
     console.error("Error signing in with Google", error);
@@ -47,8 +64,20 @@ export const signInWithGoogle = async () => {
   }
 };
 
+export const getGoogleAccessToken = (): string | null => {
+  const token = localStorage.getItem(GOOGLE_ACCESS_TOKEN_KEY);
+  console.log(
+    "[FIREBASE] Recuperando access token do localStorage:",
+    token ? "Encontrado" : "Não encontrado"
+  );
+  return token;
+};
+
 export const logout = async () => {
   try {
+    // Limpar o access token do localStorage
+    localStorage.removeItem(GOOGLE_ACCESS_TOKEN_KEY);
+    console.log("[FIREBASE] Access token removido do localStorage");
     await firebaseSignOut(auth);
   } catch (error) {
     console.error("Error signing out", error);
