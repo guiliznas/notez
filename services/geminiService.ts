@@ -1,8 +1,13 @@
-
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 
-// Initialize the client strictly with process.env.API_KEY
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+console.log(
+  "[GEMINI] Inicializando Gemini API...",
+  import.meta.env.VITE_GEMINI_API_KEY ? "API Key encontrada" : "API Key ausente"
+);
+
+// Initialize the client strictly with import.meta.env.VITE_GEMINI_API_KEY
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+console.log("[GEMINI] Gemini API inicializado");
 
 /**
  * Enhances a quick note by fixing grammar, formatting, or expanding slightly.
@@ -13,7 +18,7 @@ export const enhanceNote = async (text: string): Promise<string> => {
   try {
     // Fix: Using generateContent directly with the model name as per guidelines for Basic Text Tasks
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: "gemini-3-flash-preview",
       contents: `Melhore e formate a seguinte nota para ficar mais clara e profissional, mantendo o idioma original (Português). Se for uma lista, formate como bullets. Mantenha conciso:\n\n"${text}"`,
     });
 
@@ -35,7 +40,7 @@ export const suggestTitle = async (content: string): Promise<string> => {
   try {
     // Fix: Using generateContent directly with the model name as per guidelines for Basic Text Tasks
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: "gemini-3-flash-preview",
       contents: `Gere um título curto (máximo 4 palavras) para um grupo de anotações que começa com este texto:\n\n"${content}"\n\nResponda apenas com o título.`,
     });
 

@@ -9,78 +9,107 @@ Este documento descreve os passos necessários para configurar as credenciais e 
 O aplicativo utiliza o Firebase para armazenar as notas e autenticar usuários com o Google.
 
 ### Passo a Passo:
+
 1. Acesse o [Console do Firebase](https://console.firebase.google.com/).
 2. Clique em **"Adicionar projeto"** e siga as instruções.
 3. No painel do projeto, clique no ícone de engrenagem (Configurações do Projeto) > **Geral**.
 4. Em "Seus aplicativos", clique no ícone web `</>` para registrar um novo app.
 5. Copie o objeto `firebaseConfig`. Você precisará desses valores para o arquivo `services/firebaseConfig.ts`.
 
+### Habilitar Autenticação:
+
+1. No menu lateral, vá em **Build > Authentication**.
+2. Clique em **Get Started**.
+3. Na aba **Sign-in method**, clique em **"Add new provider"** e selecione **Google**.
+4. Ative o seletor, escolha um e-mail de suporte e salve.
+
+### Habilitar Firestore:
+
+1. No menu lateral, vá em **Build > Firestore Database**.
+2. Clique em **Create database**.
+3. Escolha o local do servidor e inicie em **Modo de Teste** (para desenvolvimento) ou configure as regras de segurança.
+
 ---
 
 ## 2. Configuração da API do Gemini (IA)
 
+O Gemini é usado para sugerir títulos e melhorar o texto das notas.
+
 1. Acesse o [Google AI Studio](https://aistudio.google.com/).
-2. Clique em **"Get API key"** e crie uma chave.
-3. Esta chave será usada na variável `API_KEY`.
+2. Clique em **"Get API key"**.
+3. Clique em **"Create API key in new project"**.
+4. Copie a chave gerada. Ela deve ser atribuída à variável de ambiente `API_KEY`.
 
 ---
 
-## 3. Implantação na Vercel (Recomendado)
+## 3. Configuração do Google Cloud (OAuth)
 
-A Vercel é a plataforma ideal para hospedar este projeto.
+Para que o login do Google funcione corretamente em domínios específicos:
 
-### Passos para Deploy:
-1. Conecte seu repositório GitHub à [Vercel](https://vercel.com/).
-2. No painel de importação, vá em **Environment Variables**.
-3. Adicione todas as chaves abaixo (exatamente com estes nomes):
-   - `API_KEY` (Sua chave do Gemini)
-   - `FIREBASE_API_KEY`
-   - `FIREBASE_AUTH_DOMAIN`
-   - `FIREBASE_PROJECT_ID`
-   - `FIREBASE_STORAGE_BUCKET`
-   - `FIREBASE_MESSAGING_SENDER_ID`
-   - `FIREBASE_APP_ID`
-4. Clique em **Deploy**.
-
-**Nota sobre Roteamento:** O arquivo `vercel.json` já está incluído no projeto para garantir que as rotas do React (como `/agenda` ou `/quick-note`) funcionem após o refresh da página.
+1. Acesse o [Google Cloud Console](https://console.cloud.google.com/).
+2. Selecione o projeto criado pelo Firebase.
+3. Vá em **APIs e Serviços > Tela de permissão OAuth**.
+4. Configure como "Externo", preencha os dados básicos e adicione o escopo `.../auth/userinfo.email` e `.../auth/userinfo.profile`.
+5. Em **Credenciais**, verifique se o "ID do cliente OAuth 2.0" foi criado automaticamente pelo Firebase. Adicione `http://localhost:3000` (ou sua porta local) aos **Origens JavaScript autorizadas**.
 
 ---
 
-## 4. Variáveis de Ambiente Locais
+## 4. Variáveis de Ambiente
 
-Para rodar localmente, você pode criar um arquivo `.env` (se estiver usando um bundler como Vite) ou definir no seu terminal:
+O projeto espera as seguintes variáveis de ambiente. Você pode configurá-las no seu ambiente de hospedagem ou preencher diretamente nos arquivos (não recomendado para produção pública):
 
-| Variável | Descrição |
-| :--- | :--- |
-| `API_KEY` | Chave da API do Google Gemini |
-| `FIREBASE_API_KEY` | apiKey do Firebase |
-| `FIREBASE_PROJECT_ID` | projectId do Firebase |
+| Variável               | Arquivo de Origem   | Descrição                         |
+| :--------------------- | :------------------ | :-------------------------------- |
+| `API_KEY`              | `geminiService.ts`  | Chave da API do Google Gemini     |
+| `FIREBASE_API_KEY`     | `firebaseConfig.ts` | apiKey do Firebase                |
+| `FIREBASE_PROJECT_ID`  | `firebaseConfig.ts` | projectId do Firebase             |
+| `FIREBASE_AUTH_DOMAIN` | `firebaseConfig.ts` | authDomain do Firebase            |
+| ...                    | ...                 | Demais campos do `firebaseConfig` |
 
 ---
 
-## 5. Como Executar o Projeto Localmente
+## 5. Como Executar o Projeto
 
-Como o projeto utiliza ES Modules nativos e `index.tsx`, recomendamos o uso de um servidor que suporte JSX/TSX ou converter os arquivos para JS.
+Como o projeto utiliza ES Modules nativos no navegador com `importmap`, você precisa de um servidor estático simples.
 
 ### Usando VS Code:
+
 1. Instale a extensão **Live Server**.
-2. Abra o `index.html`.
+2. Clique com o botão direito no `index.html` e selecione **"Open with Live Server"**.
+
+### Usando Terminal (Node.js):
+
+```bash
+# Instale um servidor estático
+npm install -g serve
+
+# Rode o servidor na pasta raiz
+serve .
+```
+
+### Usando Python:
+
+```bash
+python -m http.server 8000
+```
+
+Acesse no navegador: `http://localhost:8000` (ou a porta indicada).
 
 ---
 
-## 6. Regras de Segurança do Firestore
+## 6. Regras do Firestore (Segurança)
 
-Configure estas regras no console do Firebase para que apenas os donos das notas possam lê-las:
+Para proteger os dados dos usuários, use estas regras no console do Firebase:
 
 ```javascript
 service cloud.firestore {
   match /databases/{database}/documents {
     match /groups/{groupId} {
-      allow read, write, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null;
     }
     match /messages/{messageId} {
-      allow read, write, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null;
     }
   }
